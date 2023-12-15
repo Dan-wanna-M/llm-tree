@@ -3,10 +3,10 @@ import { EChartOption } from "echarts";
 export type BranchData = {
     id: string,
     color: string,
-    width: number,
-    stem_coordinates: [number, number],
-    stem_height: number,
-    tip_coordinates: [number, number],
+    width: number|undefined,
+    // from stem to tip
+    coordinates: [[number, number], [number, number], [number, number], [number, number]],
+    children_ids:string[]
     fruit: FruitData
 }
 
@@ -23,3 +23,8 @@ export type TreeData = {
     echart_options: EChartOption;
     branches: BranchData[]
 };
+
+export type Config = {
+    minimum_branch_width: number,
+    branch_width_coefficient: number
+}

@@ -1,19 +1,19 @@
 // Import React and ECharts components
 import _ from 'lodash';
 import type { EChartOption, ECharts } from "echarts";
-import { BranchData } from './data';
+import { BranchData, TreeData } from './data';
 
 
 
 
 
-export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_data: BranchData, setOption: (new_option: EChartOption) => void) {
-    const coordinates = [branch_data.stem_coordinates, [branch_data.stem_coordinates[0], branch_data.stem_coordinates[1] + branch_data.stem_height], branch_data.tip_coordinates]
+export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_data: BranchData, tree_data: TreeData, setOption: (new_option: EChartOption) => void) {
     const onPointDragging = (dataIndex: number, pos: number[]) => {
         let data = chart.getOption().series!.find((value) => value.id === branch_data.id)!.data!;
         let new_data = [...data];
         new_data[dataIndex] = chart.convertFromPixel({ gridId: "0" }, pos);
         console.log(new_data);
+        tree_data.branches.find((value) => value.id === branch_data.id)!.coordinates = new_data as any;
         let newOption = {
             series: [
                 {
@@ -29,7 +29,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             id: branch_data.id,
             type: 'line',
             lineStyle: { width: branch_data.width, color: branch_data.color },
-            data: coordinates,
+            data: branch_data.coordinates,
             smooth: true,
             symbolSize: 0,
             z: -1
@@ -37,10 +37,10 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
         graphic: [...old_option.graphic as object[],
         {
             type: 'group',
-            position: chart.convertToPixel({ gridId: "0" }, branch_data.tip_coordinates),
+            position: chart.convertToPixel({ gridId: "0" }, branch_data.coordinates[3]),
             invisible: false,
             draggable: true,
-            ondrag: function (dx: number, dy: number) { onPointDragging(2, [(this as any).x, (this as any).y]) },
+            ondrag: function (dx: number, dy: number) { onPointDragging(3, [(this as any).x, (this as any).y]) },
             throttle: 20,
             children: [
                 {
@@ -78,6 +78,5 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
 
         ]
     }
-    console.log(new_option);
     return new_option;
 }
