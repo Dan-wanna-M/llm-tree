@@ -12,7 +12,6 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
         let data = chart.getOption().series!.find((value) => value.id === branch_data.id)!.data!;
         let new_data = [...data];
         new_data[dataIndex] = chart.convertFromPixel({ gridId: "0" }, pos);
-        console.log(new_data);
         tree_data.branches.find((value) => value.id === branch_data.id)!.coordinates = new_data as any;
         let newOption = {
             series: [
@@ -23,6 +22,10 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             ]
         };
         setOption(newOption as EChartOption);
+    }
+    if(old_option.graphic===undefined)
+    {
+        old_option.graphic = [];
     }
     const new_option: EChartOption = {
         series: [...old_option.series as object[], {

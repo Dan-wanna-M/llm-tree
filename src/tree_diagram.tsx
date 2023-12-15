@@ -7,6 +7,7 @@ import { CreateBranch } from './branch';
 import { Config, TreeData } from './data';
 import { SaveJSON, UploadJSON } from './Serialization';
 import FruitDataEditor from './editor';
+import { Button, Grid } from '@mui/material';
 
 let current_tree_data: TreeData = {
     echart_options: {
@@ -20,12 +21,14 @@ let current_tree_data: TreeData = {
             data: []
         },
         xAxis: {
+            id: "0",
             min: -200,
             max: 200,
             type: 'value',
             axisLine: { onZero: false }
         },
         yAxis: {
+            id: "0",
             min: -200,
             max: 200,
             type: 'value',
@@ -35,8 +38,10 @@ let current_tree_data: TreeData = {
         ],
         grid: {
             id: "0",
-            top: '8%',
-            bottom: '12%'
+            left: "5%",
+            top: "5%",
+            right: "2%",
+            bottom: "5%"
         },
         graphic: []
     },
@@ -53,22 +58,29 @@ const config: Config = {
 const MyChartComponent: React.FC = () => {
     const instance = useRef(null);
     const [option, setOption] = useState(current_tree_data.echart_options);
+    const [replace, setReplace] = useState(true);
     const synchronizeDataAndGraph = () => {
         let diagram = instance.current as any;
         if (diagram === null) {
             return;
         }
+        console.log("OK");
         const myChart: ECharts = diagram.getEchartsInstance();
-        if (option == current_tree_data.echart_options) {
-            let newOption = option;
-            myChart.setOption(newOption);
-            for (const branch of current_tree_data.branches) {
-                newOption = CreateBranch(myChart, newOption, branch, current_tree_data, setOption);
-            }
-            setOption(newOption);
+        let newOption = { ...current_tree_data.echart_options };
+        if (replace === true) {
+            myChart.setOption(current_tree_data.echart_options, true);
+            setReplace(false);
         }
+        console.log(myChart.getOption());
+        for (const branch of current_tree_data.branches) {
+            newOption = CreateBranch(myChart, newOption, branch, current_tree_data, setOption);
+        }
+        let final_option = { ...current_tree_data.echart_options, ...newOption };
+        setOption(final_option);
+        console.log("Executed1");
+
     }
-    useEffect(synchronizeDataAndGraph, [option]);
+    useEffect(synchronizeDataAndGraph, [replace]);
 
     const GetImage = () => {
         let diagram = instance.current as any;
@@ -81,25 +93,34 @@ const MyChartComponent: React.FC = () => {
         const newWin = window.open('', '_blank');
         (newWin as any).document.write(img.outerHTML);
     }
-
     return (<>
-        <div style={{ display: 'flex', justifyContent: 'centre' }}>
-            <ReactECharts
-                ref={instance}
-                option={option}
-                lazyUpdate={true}
-                onChartReady={synchronizeDataAndGraph}
-                style={{ width: '90vw', height: '90vh' }}
-            />
-            <FruitDataEditor />
-        </div>
+        <Grid container>
+            <Grid item xs={10} style={{ height: '90vh' }}>
+                <ReactECharts
+                    ref={instance}
+                    option={option}
+                    lazyUpdate={true}
+                    onChartReady={synchronizeDataAndGraph}
+                    notMerge={replace}
+                    style={{ height: '90vh' }}
+
+                />
+            </Grid>
+            <Grid item xs={2}>
+                <FruitDataEditor updateData={(branch) => {
+                    current_tree_data.branches.push(branch);
+                    synchronizeDataAndGraph();
+                }} />
+            </Grid>
+
+        </Grid>
         <SaveJSON data={current_tree_data} />
         <UploadJSON updateData={(data) => {
             current_tree_data = data;
-            setOption(current_tree_data.echart_options);
+            setReplace(true);
         }} />
         <div>
-            <button onClick={GetImage}>Get Image</button>
+            <Button onClick={GetImage} variant="outlined">Get Image</Button>
         </div>
     </>);
 };

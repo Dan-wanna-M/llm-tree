@@ -1,5 +1,6 @@
+import { Button, Grid } from "@mui/material";
 import { Dispatch, SetStateAction, useState } from "react";
-
+import { MuiFileInput } from 'mui-file-input'
 export const SaveJSON = (props: { data: any; }) => {
     const save = () => {
         const jsonData = JSON.stringify(props.data);
@@ -14,28 +15,34 @@ export const SaveJSON = (props: { data: any; }) => {
         document.body.removeChild(a);
     }
     return <div>
-        <button onClick={save}>Save Json</button>
+        <Button variant="outlined" onClick={save}>Save Json</Button>
     </div>;
 };
 
-export const UploadJSON = (props: { updateData: (data:any)=>void }) => {
+export const UploadJSON = (props: { updateData: (data: any) => void }) => {
     const [selectedFile, setSelectedFile] = useState(null) as [File | null, Dispatch<SetStateAction<null | File>>];
 
     const handleFileChange = (e: any) => {
-        const file = e.target.files[0];
+        const file = e;
         setSelectedFile(file);
     };
-    const handleUpload = async () => {
+
+    const handleFileUpload = async () => {
         if (selectedFile) {
             console.log(await selectedFile.text());
             props.updateData(JSON.parse(await selectedFile.text()));
         }
+
     };
 
     return (
         <div>
-            <input type="file" onChange={handleFileChange} />
-            <button onClick={handleUpload}>Upload</button>
+            <MuiFileInput value={selectedFile} onChange={handleFileChange} placeholder="Upload a json file" inputProps={{
+                accept: ".json"
+            }} size="small"/>
+            <Button disabled={selectedFile === null} variant="outlined" onClick={handleFileUpload}>
+                Upload
+            </Button>
         </div>
     );
 };
