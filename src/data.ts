@@ -3,7 +3,8 @@ import { EChartOption } from "echarts";
 export type BranchData = {
     id: string,
     color: string,
-    width: number|undefined,
+    width: number,
+    parent_id:undefined|string
     // from stem to tip
     coordinates: [[number, number], [number, number], [number, number], [number, number]],
     children_ids:string[]

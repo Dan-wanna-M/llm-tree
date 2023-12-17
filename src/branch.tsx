@@ -22,18 +22,20 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             ]
         };
         setOption(newOption as EChartOption);
-    }
+    };
     if (old_option.graphic === undefined) {
         old_option.graphic = []
-    }
+    };
+
     const draggable_points = branch_data.coordinates.slice(0, -1).map((xy, dataIndex) => {
+        const draggable = branch_data.parent_id === undefined || dataIndex !== 0;
         return {
             type: 'circle',
             id: 'drag_points' + branch_data.id + dataIndex,
             position: chart.convertToPixel({ gridId: "0" }, xy),
-            invisible: false,
+            invisible: !draggable,
             shape: { r: tree_data.context.adjusting_position_enabled ? 20 : 0 },
-            draggable: true,
+            draggable: draggable,
             ondrag: function (dx: number, dy: number) { onPointDragging(dataIndex, [(this as any).x, (this as any).y]) },
             throttle: 20,
         };
@@ -54,7 +56,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             type: 'group',
             position: chart.convertToPixel({ gridId: "0" }, branch_data.coordinates[3]),
             invisible: false,
-            draggable: true,
+            draggable: tree_data.context.adjusting_position_enabled,
             ondrag: function (dx: number, dy: number) { onPointDragging(3, [(this as any).x, (this as any).y]) },
             throttle: 20,
             children: [
