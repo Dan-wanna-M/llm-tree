@@ -6,7 +6,7 @@ import type { EChartOption, EChartsConvertFinder, ECharts, SetOptionOpts } from 
 import { CreateBranch } from './branch';
 import { Config, TreeData } from './data';
 import { SaveJSON, UploadJSON } from './Serialization';
-import FruitDataEditor from './editor';
+import BranchDataEditor from './editor';
 import { Button, Grid } from '@mui/material';
 
 let current_tree_data: TreeData = {
@@ -43,15 +43,18 @@ let current_tree_data: TreeData = {
             right: "2%",
             bottom: "5%"
         },
-        graphic: []
+        graphic: [],
     },
     branches: [
-    ]
-}
-
-const config: Config = {
-    minimum_branch_width: 5,
-    branch_width_coefficient: 0.5
+    ],
+    config: {
+        minimum_branch_width: 5,
+        branch_width_coefficient: 0.5
+    },
+    context: {
+        id_counter: 0,
+        adjusting_position_enabled: false
+    }
 }
 
 // Component using echarts-for-react
@@ -59,12 +62,24 @@ const MyChartComponent: React.FC = () => {
     const instance = useRef(null);
     const [option, setOption] = useState(current_tree_data.echart_options);
     const [replace, setReplace] = useState(true);
+
+    const onChartReady=()=>{
+        let diagram = instance.current as any;
+        if (diagram === null) {
+            return;
+        }
+        const myChart: ECharts = diagram.getEchartsInstance();
+        /*myChart.on('click',"series.line", (value:any)=>{
+            console.log(value)
+        });*/
+        synchronizeDataAndGraph();
+    }
+
     const synchronizeDataAndGraph = () => {
         let diagram = instance.current as any;
         if (diagram === null) {
             return;
         }
-        console.log("OK");
         const myChart: ECharts = diagram.getEchartsInstance();
         let newOption = { ...current_tree_data.echart_options };
         if (replace === true) {
@@ -76,9 +91,8 @@ const MyChartComponent: React.FC = () => {
             newOption = CreateBranch(myChart, newOption, branch, current_tree_data, setOption);
         }
         let final_option = { ...current_tree_data.echart_options, ...newOption };
+        // console.log(final_option);
         setOption(final_option);
-        console.log("Executed1");
-
     }
     useEffect(synchronizeDataAndGraph, [replace]);
 
@@ -100,19 +114,20 @@ const MyChartComponent: React.FC = () => {
                     ref={instance}
                     option={option}
                     lazyUpdate={true}
-                    onChartReady={synchronizeDataAndGraph}
+                    onChartReady={onChartReady}
                     notMerge={replace}
                     style={{ height: '90vh' }}
 
                 />
             </Grid>
             <Grid item xs={2}>
-                <FruitDataEditor updateData={(branch) => {
+                <BranchDataEditor updateData={(branch) => {
                     current_tree_data.branches.push(branch);
+                    synchronizeDataAndGraph();
+                }} context={current_tree_data.context} updateContext={(context) => {
                     synchronizeDataAndGraph();
                 }} />
             </Grid>
-
         </Grid>
         <SaveJSON data={current_tree_data} />
         <UploadJSON updateData={(data) => {

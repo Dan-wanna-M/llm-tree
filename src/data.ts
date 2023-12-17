@@ -21,10 +21,17 @@ export type FruitData = {
 
 export type TreeData = {
     echart_options: EChartOption;
-    branches: BranchData[]
+    branches: BranchData[],
+    config:Config,
+    context:Context
 };
 
 export type Config = {
     minimum_branch_width: number,
-    branch_width_coefficient: number
+    branch_width_coefficient: number,
+}
+
+export type Context = {
+    id_counter:number
+    adjusting_position_enabled:boolean
 }

@@ -1,7 +1,7 @@
 // Import React and ECharts components
 import _ from 'lodash';
 import type { EChartOption, ECharts } from "echarts";
-import { BranchData, TreeData } from './data';
+import { BranchData, Context, TreeData } from './data';
 
 
 
@@ -23,10 +23,21 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
         };
         setOption(newOption as EChartOption);
     }
-    if(old_option.graphic===undefined)
-    {
-        old_option.graphic = [];
+    if (old_option.graphic === undefined) {
+        old_option.graphic = []
     }
+    const draggable_points = branch_data.coordinates.slice(0, -1).map((xy, dataIndex) => {
+        return {
+            type: 'circle',
+            id: 'drag_points' + branch_data.id + dataIndex,
+            position: chart.convertToPixel({ gridId: "0" }, xy),
+            invisible: false,
+            shape: { r: tree_data.context.adjusting_position_enabled ? 20 : 0 },
+            draggable: true,
+            ondrag: function (dx: number, dy: number) { onPointDragging(dataIndex, [(this as any).x, (this as any).y]) },
+            throttle: 20,
+        };
+    });
     const new_option: EChartOption = {
         series: [...old_option.series as object[], {
             id: branch_data.id,
@@ -34,10 +45,11 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             lineStyle: { width: branch_data.width, color: branch_data.color },
             data: branch_data.coordinates,
             smooth: true,
+            triggerLineEvent: true,
             symbolSize: 0,
             z: -1
         }],
-        graphic: [...old_option.graphic as object[],
+        graphic: [...old_option.graphic as object[], ...draggable_points,
         {
             type: 'group',
             position: chart.convertToPixel({ gridId: "0" }, branch_data.coordinates[3]),
@@ -76,9 +88,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
                     z: 20
                 }
             ]
-
         },
-
         ]
     }
     return new_option;

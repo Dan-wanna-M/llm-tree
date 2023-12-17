@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BranchData } from './data';
+import React, { useEffect, useState } from 'react';
+import { BranchData, Context } from './data';
 import { Formik, Form, Field, ErrorMessage, useFormik } from 'formik';
 import Button from '@mui/material/Button';
 import Input from '@mui/material/Input';
@@ -13,12 +13,16 @@ const Div = styled('div')(({ theme }) => ({
     fontSize: 16
 }));
 
-let ID_counter = 0; 
-
-const BranchDataEditor = (props: { updateData: (branch: BranchData) => void }) => {
+const BranchDataEditor = (props:
+    {
+        context: Context,
+        updateContext: (context: Context) => void,
+        updateData: (branch: BranchData) => void,
+    }) => {
     const formik = useFormik({
+        enableReinitialize: true,
         initialValues: {
-            id: ID_counter.toString(),
+            id: props.context.id_counter.toString(),
             color: '#FF0000',
             width: 20,
             coordinates: [[0, 0], [20, 20], [80, 100], [100, 150]] as [[number, number], [number, number], [number, number], [number, number]],
@@ -33,23 +37,24 @@ const BranchDataEditor = (props: { updateData: (branch: BranchData) => void }) =
             }
         },
         onSubmit: branch => {
-            const new_branch = {...branch};
-            new_branch.id = ID_counter.toString();
-            ID_counter+=1;
-            console.log(new_branch);
+            const new_branch = { ...branch };
+            new_branch.id = props.context.id_counter.toString();
+            props.context.id_counter += 1;
+            props.updateContext({ ...props.context });
             props.updateData(new_branch);
         },
     });
+    useEffect(() => { props.updateContext(props.context) }, [props.context]);
     return (
-        <Grid container item>
+        <Grid container item rowSpacing={1}>
             <Grid item xs={12}>
-                <Typography align={"center"} variant='h4'>Branch Editor</Typography >
+                <Typography align={"center"} variant='h4'>Branch Editor</Typography>
             </Grid>
             <Grid item xs={6}>
                 <Div>ID</Div >
             </Grid>
             <Grid item xs={6}>
-            <TextField size="small"
+                <TextField size="small"
                     id="id"
                     name="id"
                     type="text"
@@ -148,6 +153,12 @@ const BranchDataEditor = (props: { updateData: (branch: BranchData) => void }) =
                     <Button type="submit">Submit</Button>
                 </Grid>
             </form>
+            <Grid item xs={12}>
+                <Button onClick={() => {
+                    props.context.adjusting_position_enabled = !props.context.adjusting_position_enabled;
+                    props.updateContext({ ...props.context });
+                }}>{!props.context.adjusting_position_enabled ? "Start adjust branch positions" : "End adjust branch positions"}</Button>
+            </Grid>
         </Grid>
     );
 };
