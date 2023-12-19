@@ -6,9 +6,14 @@ export type BranchData = {
     width: number,
     parent_id:undefined|string
     // from stem to tip
-    coordinates: [[number, number], [number, number], [number, number], [number, number]],
-    children_ids:string[]
+    coordinates: [number, number][],
+    children:Record<string, ChildrenData>
     fruit: FruitData
+}
+
+export type ChildrenData=
+{
+    connection_point_index:number
 }
 
 export type FruitData = {
@@ -30,6 +35,7 @@ export type TreeData = {
 export type Config = {
     minimum_branch_width: number,
     branch_width_coefficient: number,
+    point_width_ratio:number
 }
 
 export type Context = {

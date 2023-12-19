@@ -2,7 +2,7 @@
 import React, { Dispatch, SetStateAction, useEffect, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import _, { values } from 'lodash';
-import type { EChartOption, EChartsConvertFinder, ECharts, SetOptionOpts } from "echarts";
+import { type EChartOption, type EChartsConvertFinder, type ECharts, type SetOptionOpts, number } from "echarts";
 import { CreateBranch } from './branch';
 import { BranchData, Config, TreeData } from './data';
 import { SaveJSON, UploadJSON } from './Serialization';
@@ -50,7 +50,8 @@ let current_tree_data: TreeData = {
     ],
     config: {
         minimum_branch_width: 5,
-        branch_width_coefficient: 0.8
+        branch_width_coefficient: 0.8,
+        point_width_ratio:1.3
     },
     context: {
         id_counter: 0,
@@ -60,15 +61,44 @@ let current_tree_data: TreeData = {
 
 const ComputeWidth = (branches: BranchData[], branch_id: string) => {
     const branch = branches.find(value => value.id === branch_id)!;
-    if (branch.children_ids.length === 0) {
+    if (Object.entries(branch.children).length === 0) {
         return branch.width;
     }
     let total_width = current_tree_data.config.minimum_branch_width;
-    for (const child of branch.children_ids) {
+    for (const [child, data] of Object.entries(branch.children)) {
         total_width += ComputeWidth(branches, child);
     }
     branch.width = total_width * current_tree_data.config.branch_width_coefficient;
     return total_width;
+}
+
+const updateClickedPointGraphic = (graphics: any[], clickedEvent: any) => {
+    const index = graphics.findIndex((value) => value.id === "clicked");
+    let graphic;
+    if (clickedEvent === undefined) {
+        graphic = {
+            type: 'circle',
+            id: 'clicked',
+            position: [1000, 1000],
+            invisible: true
+        };
+    }
+    else {
+        graphic = {
+            type: 'circle',
+            id: 'clicked',
+            position: [clickedEvent.event.offsetX, clickedEvent.event.offsetY],
+            invisible: false,
+            shape: { r: 5 },
+        };
+    }
+
+    if (index === -1) {
+        graphics.push(graphic);
+    }
+    else {
+        graphics[index] = graphic;
+    }
 }
 
 // Component using echarts-for-react
@@ -123,38 +153,14 @@ const MyChartComponent: React.FC = () => {
         for (const branch of current_tree_data.branches) {
             newOption = CreateBranch(myChart, newOption, branch, current_tree_data, setOption);
         }
-        const index = (newOption.graphic as any[]).findIndex((value) => value.id === "clicked");
-        let graphic;
-        if (clickedEvent === undefined) {
-            graphic = {
-                type: 'circle',
-                id: 'clicked',
-                invisible: true
-            };
-        }
-        else {
-            graphic = {
-                type: 'circle',
-                id: 'clicked',
-                position: [clickedEvent.event.offsetX, clickedEvent.event.offsetY],
-                invisible: false,
-                shape: { r: 5 },
-            };
-        }
-
-        if (index === -1) {
-            (newOption.graphic as any[]).push(graphic);
-        }
-        else {
-            (newOption.graphic as any[])[index] = graphic;
-        }
-
+        updateClickedPointGraphic(newOption.graphic as any[], clickedEvent);
         let final_option = { ...current_tree_data.echart_options, ...newOption };
-        // console.log(final_option);
         setOption(final_option);
     }
+
     useEffect(synchronizeDataAndGraph, [replace, clickedEvent]);
     useEffect(() => setClickedEvent(undefined), [current_tree_data.context.adjusting_position_enabled]);
+
     const GetImage = () => {
         let diagram = instance.current as any;
         if (diagram === null) {
@@ -188,10 +194,42 @@ const MyChartComponent: React.FC = () => {
                     const myChart: ECharts = diagram.getEchartsInstance();
                     const clicked_graphic = (myChart?.getOption()?.graphic as any)[0].elements.find((value: any) => value.id === "clicked");
                     if (clicked_graphic && !clicked_graphic.invisible) {
-                        console.log(clicked_graphic);
-                        branch.coordinates[0] = myChart.convertFromPixel({ gridId: "0" }, clicked_graphic.position) as [number, number];
-                        branch.parent_id = clickedEvent.seriesIndex.toString();
-                        current_tree_data.branches.find((value) => value.id === clickedEvent.seriesIndex.toString())?.children_ids.push(branch.id);
+                        // console.log(clicked_graphic);
+                        let position = myChart.convertFromPixel({ gridId: "0" }, clicked_graphic.position) as [number, number];
+                        let parent_branch = current_tree_data.branches.find((value) => value.id === clickedEvent.seriesIndex.toString())!;
+                        const distance = current_tree_data.config.point_width_ratio * parent_branch.width;
+                        let overlap = false;
+                        let index;
+                        console.log(distance);
+                        for (let i = 0; i < parent_branch.coordinates.length; i++) {
+                            const coordinate = parent_branch.coordinates[i];
+                            console.log(position, coordinate);
+                            if (Math.pow(position[0] - coordinate[0], 2) + Math.pow(position[1] - coordinate[1], 2) <= distance * distance) {
+                                position = coordinate;
+                                overlap = true;
+                                index = i;
+                                break;
+                            }
+                        }
+                        if(index===0)
+                        {
+                            let current = parent_branch;
+                            while(current.parent_id!==undefined)
+                            {
+                                current = current_tree_data.branches.find((value)=>value.id===current.parent_id)!;
+                            }
+                            parent_branch = current;
+                        }
+                        // console.log("WTF", overlap);
+                        branch.coordinates[0] = position;
+                        console.log(overlap);
+                        branch.parent_id = parent_branch.id;
+                        if (!overlap) {
+                            index = parent_branch.coordinates.findIndex((value) => value[0] > branch.coordinates[0][0]);
+                            parent_branch.coordinates.splice(index, 0, branch.coordinates[0]);
+                        }
+                        parent_branch.children[branch.id] = { connection_point_index: index as number };
+                        setReplace(true);
                     }
                     current_tree_data.branches.push(branch);
                     synchronizeDataAndGraph();

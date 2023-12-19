@@ -21,6 +21,20 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
                 }
             ]
         };
+        const results = Object.entries(branch_data.children).filter((value) => value[1].connection_point_index === dataIndex);
+        for(const result of results)
+        {
+            const [child_id, child_data] = result;
+            const child = tree_data.branches.find((value) => value.id === child_id)!;
+            const child_series_data = chart.getOption().series!.find((value) => value.id === child_id)!.data!;
+            const new_child_data = [...child_series_data];
+            child.coordinates[0] = new_data[dataIndex] as [number, number];
+            new_child_data[0] = new_data[dataIndex];
+            newOption.series.push({
+                id: child_id,
+                data: new_child_data,
+            });
+        }
         setOption(newOption as EChartOption);
     };
     if (old_option.graphic === undefined) {
@@ -34,7 +48,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             id: 'drag_points' + branch_data.id + dataIndex,
             position: chart.convertToPixel({ gridId: "0" }, xy),
             invisible: !draggable,
-            shape: { r: tree_data.context.adjusting_position_enabled ? 20 : 0 },
+            shape: { r: tree_data.context.adjusting_position_enabled ? branch_data.width * tree_data.config.point_width_ratio : 0 },
             draggable: draggable,
             ondrag: function (dx: number, dy: number) { onPointDragging(dataIndex, [(this as any).x, (this as any).y]) },
             throttle: 20,
@@ -54,10 +68,10 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
         graphic: [...old_option.graphic as object[], ...draggable_points,
         {
             type: 'group',
-            position: chart.convertToPixel({ gridId: "0" }, branch_data.coordinates[3]),
+            position: chart.convertToPixel({ gridId: "0" }, branch_data.coordinates[branch_data.coordinates.length - 1]),
             invisible: false,
             draggable: tree_data.context.adjusting_position_enabled,
-            ondrag: function (dx: number, dy: number) { onPointDragging(3, [(this as any).x, (this as any).y]) },
+            ondrag: function (dx: number, dy: number) { onPointDragging(branch_data.coordinates.length - 1, [(this as any).x, (this as any).y]) },
             throttle: 20,
             children: [
                 {

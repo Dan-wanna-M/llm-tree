@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BranchData, Config, Context } from './data';
+import { BranchData, ChildrenData, Config, Context } from './data';
 import { Formik, Form, Field, ErrorMessage, useFormik } from 'formik';
 import Button from '@mui/material/Button';
 import Input from '@mui/material/Input';
@@ -15,7 +15,7 @@ const Div = styled('div')(({ theme }) => ({
 
 const BranchDataEditor = (props:
     {
-        config:Config,
+        config: Config,
         context: Context,
         updateContext: (context: Context) => void,
         updateData: (branch: BranchData) => void,
@@ -27,8 +27,8 @@ const BranchDataEditor = (props:
             color: '#FF0000',
             width: props.config.minimum_branch_width,
             coordinates: [[0, 0], [20, 20], [80, 100], [100, 150]] as [[number, number], [number, number], [number, number], [number, number]],
-            children_ids: [],
-            parent_id:undefined,
+            children: {},
+            parent_id: undefined,
             fruit: {
                 text: 'LLM',
                 font_size: '2em',
