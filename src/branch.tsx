@@ -11,7 +11,8 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
     const onPointDragging = (dataIndex: number, pos: number[]) => {
         let data = chart.getOption().series!.find((value) => value.id === branch_data.id)!.data!;
         let new_data = [...data];
-        new_data[dataIndex] = chart.convertFromPixel({ gridId: "0" }, pos);
+        const position = chart.convertFromPixel({ gridId: "0" }, pos);
+        new_data[dataIndex] = position;
         tree_data.branches.find((value) => value.id === branch_data.id)!.coordinates = new_data as any;
         let newOption = {
             series: [
@@ -22,8 +23,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             ]
         };
         const results = Object.entries(branch_data.children).filter((value) => value[1].connection_point_index === dataIndex);
-        for(const result of results)
-        {
+        for (const result of results) {
             const [child_id, child_data] = result;
             const child = tree_data.branches.find((value) => value.id === child_id)!;
             const child_series_data = chart.getOption().series!.find((value) => value.id === child_id)!.data!;
@@ -40,15 +40,18 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
     if (old_option.graphic === undefined) {
         old_option.graphic = []
     };
-
-    const draggable_points = branch_data.coordinates.slice(0, -1).map((xy, dataIndex) => {
+    let end = undefined;
+    if (branch_data.fruit !== undefined) {
+        end = -1;
+    }
+    const draggable_points = branch_data.coordinates.slice(0, end).map((xy, dataIndex) => {
         const draggable = branch_data.parent_id === undefined || dataIndex !== 0;
         return {
             type: 'circle',
             id: 'drag_points' + branch_data.id + dataIndex,
             position: chart.convertToPixel({ gridId: "0" }, xy),
             invisible: !draggable,
-            shape: { r: tree_data.context.adjusting_position_enabled ? branch_data.width * tree_data.config.point_width_ratio : 0 },
+            shape: { r: tree_data.context.adjusting_position_enabled ? branch_data.width : 0 },
             draggable: draggable,
             ondrag: function (dx: number, dy: number) { onPointDragging(dataIndex, [(this as any).x, (this as any).y]) },
             throttle: 20,
@@ -65,8 +68,10 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
             symbolSize: 0,
             z: -1
         }],
-        graphic: [...old_option.graphic as object[], ...draggable_points,
-        {
+        graphic: [...old_option.graphic as object[], ...draggable_points]
+    };
+    if (branch_data.fruit !== undefined) {
+        (new_option!.graphic as any[]).push({
             type: 'group',
             position: chart.convertToPixel({ gridId: "0" }, branch_data.coordinates[branch_data.coordinates.length - 1]),
             invisible: false,
@@ -83,10 +88,13 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
                     style: {
                         text: branch_data.fruit.text,
                         fontSize: branch_data.fruit.font_size,
+                        textFill:branch_data.fruit.text_color,
                         fill: branch_data.fruit.fill_color,
+                        fontWeight:"bold",
                         stroke: branch_data.fruit.stroke_color,
                         lineWidth: 5,
                     },
+                    fontWeight: 'bold',
                     bounding: false
                 },
                 {
@@ -94,18 +102,17 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
                     id: 'image' + branch_data.id,
                     top: "middle",
                     style: {
-                        x: branch_data.fruit.shape.height,
+                        x: branch_data.fruit.shape.width/2+5,
                         y: branch_data.fruit.shape.height,
                         image: branch_data.fruit.image,
                         fill: "#FF0000",
-                        width: 50,
-                        height: 50
+                        width: branch_data.fruit.shape.height,
+                        height: branch_data.fruit.shape.height
                     },
                     z: 20
                 }
             ]
-        },
-        ]
+        });
     }
     return new_option;
 }

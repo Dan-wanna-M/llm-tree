@@ -3,8 +3,9 @@ import { BranchData, ChildrenData, Config, Context } from './data';
 import { Formik, Form, Field, ErrorMessage, useFormik } from 'formik';
 import Button from '@mui/material/Button';
 import Input from '@mui/material/Input';
-import { Grid, TextField, Typography, styled } from '@mui/material';
+import { Checkbox, Grid, TextField, Typography, styled } from '@mui/material';
 import { Label } from '@mui/icons-material';
+import { MuiFileInput } from 'mui-file-input';
 
 const Div = styled('div')(({ theme }) => ({
     ...theme.typography.caption,
@@ -20,32 +21,59 @@ const BranchDataEditor = (props:
         updateContext: (context: Context) => void,
         updateData: (branch: BranchData) => void,
     }) => {
+    const [lastform, setFormData] = useState({
+        id: props.context.id_counter.toString(),
+        color: '#FF0000',
+        width: props.config.minimum_branch_width,
+        coordinates: [[0, 0], [20, 20], [80, 100], [100, 150]] as [[number, number], [number, number], [number, number], [number, number]],
+        children: {},
+        parent_id: undefined,
+        fruit: {
+            text: 'LLM',
+            font_size: '2em',
+            shape: { width: 100, height: 50 },
+            stroke_color: '#FF0000',
+            fill_color: '#FF0000',
+            image: '',
+            text_color: '#FFFFFF',
+        } as any | undefined
+    });
     const formik = useFormik({
         enableReinitialize: true,
-        initialValues: {
-            id: props.context.id_counter.toString(),
-            color: '#FF0000',
-            width: props.config.minimum_branch_width,
-            coordinates: [[0, 0], [20, 20], [80, 100], [100, 150]] as [[number, number], [number, number], [number, number], [number, number]],
-            children: {},
-            parent_id: undefined,
-            fruit: {
-                text: 'LLM',
-                font_size: '2em',
-                shape: { width: 100, height: 50 },
-                stroke_color: '#FF0000',
-                fill_color: '#FF0000',
-                image: ''
-            }
-        },
-        onSubmit: branch => {
+        initialValues: lastform,
+        onSubmit: async (branch) => {
             const new_branch = { ...branch };
             new_branch.id = props.context.id_counter.toString();
-            props.context.id_counter += 1;
-            props.updateContext({ ...props.context });
-            props.updateData(new_branch);
+            if (!fruit_enabled) {
+                new_branch.fruit = undefined;
+            }
+            if (image) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    console.log(reader.result);
+                    props.context.id_counter += 1;
+                    new_branch.fruit.image = reader.result;
+                    branch.fruit.image = reader.result;
+                    props.updateContext({ ...props.context });
+                    props.updateData(new_branch);
+                    setFormData(branch);
+                };
+                reader.readAsDataURL(image);
+            }
+            else{
+                props.context.id_counter += 1;
+                props.updateContext({ ...props.context });
+                props.updateData(new_branch);
+                setFormData(branch);
+            }
         },
     });
+    const [fruit_enabled, set_fruit_enabled] = useState(true);
+    const [image, setImage] = useState(undefined);
+    const handleFileChange = (e: any) => {
+        const file = e;
+        setImage(file);
+    };
     useEffect(() => { props.updateContext(props.context) }, [props.context]);
     return (
         <Grid container item rowSpacing={1}>
@@ -78,10 +106,19 @@ const BranchDataEditor = (props:
                 />
             </Grid>
             <Grid item xs={6}>
+                <Div>Enable Fruit</Div>
+            </Grid>
+            <Grid item xs={6}>
+                <Checkbox defaultChecked onChange={(event) => {
+                    set_fruit_enabled(event.target.checked);
+                }} />
+            </Grid>
+            <Grid item xs={6}>
                 <Div>Fruit Text</Div>
             </Grid>
             <Grid item xs={6}>
                 <TextField size="small"
+                    disabled={!fruit_enabled}
                     id="fruit.text"
                     name="fruit.text"
                     type="text"
@@ -94,6 +131,7 @@ const BranchDataEditor = (props:
             </Grid>
             <Grid item xs={6}>
                 <TextField size="small"
+                    disabled={!fruit_enabled}
                     id="fruit.font_size"
                     name="fruit.font_size"
                     type="text"
@@ -106,6 +144,7 @@ const BranchDataEditor = (props:
             </Grid>
             <Grid item xs={6}>
                 <input style={{ width: "8vw", height: "4vh" }}
+                    disabled={!fruit_enabled}
                     id="fruit.fill_color"
                     name="fruit.fill_color"
                     type="color"
@@ -114,11 +153,25 @@ const BranchDataEditor = (props:
                 />
             </Grid>
             <Grid item xs={6}>
+                <Div>Fruit Text Color</Div>
+            </Grid>
+            <Grid item xs={6}>
+                <input style={{ width: "8vw", height: "4vh" }}
+                    disabled={!fruit_enabled}
+                    id="fruit.text_color"
+                    name="fruit.text_color"
+                    type="color"
+                    onChange={formik.handleChange}
+                    value={formik.values.fruit.text_color}
+                />
+            </Grid>
+            <Grid item xs={6}>
                 <Div>Fruit Stroke Color</Div>
 
             </Grid>
             <Grid item xs={6}>
                 <input style={{ width: "8vw", height: "4vh" }}
+                    disabled={!fruit_enabled}
                     id="fruit.stroke_color"
                     name="fruit.stroke_color"
                     type="color"
@@ -131,6 +184,7 @@ const BranchDataEditor = (props:
             </Grid>
             <Grid item xs={6}>
                 <TextField size="small"
+                    disabled={!fruit_enabled}
                     id="fruit.shape.width"
                     name="fruit.shape.width"
                     type="number"
@@ -143,12 +197,21 @@ const BranchDataEditor = (props:
             </Grid>
             <Grid item xs={6}>
                 <TextField size="small"
+                    disabled={!fruit_enabled}
                     id="fruit.shape.height"
                     name="fruit.shape.height"
                     type="number"
                     onChange={formik.handleChange}
                     value={formik.values.fruit.shape.height}
                 />
+            </Grid>
+            <Grid item xs={6}>
+                <Div >Fruit Image</Div>
+            </Grid>
+            <Grid item xs={6}>
+                <MuiFileInput value={image} onChange={handleFileChange} placeholder="Upload a fruit image" inputProps={{
+                    accept: "image/*"
+                }} size="small" />
             </Grid>
             <form style={{ width: "100vw" }} onSubmit={formik.handleSubmit}>
                 <Grid item xs={12}>

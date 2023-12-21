@@ -8,7 +8,7 @@ export type BranchData = {
     // from stem to tip
     coordinates: [number, number][],
     children:Record<string, ChildrenData>
-    fruit: FruitData
+    fruit: FruitData|undefined
 }
 
 export type ChildrenData=
@@ -23,6 +23,7 @@ export type FruitData = {
     stroke_color: string
     fill_color: string
     image: string
+    text_color:string
 }
 
 export type TreeData = {

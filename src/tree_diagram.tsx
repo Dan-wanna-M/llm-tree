@@ -22,17 +22,23 @@ let current_tree_data: TreeData = {
         },
         xAxis: {
             id: "0",
-            min: -200,
-            max: 200,
+            min: 0,
+            max: 2000,
             type: 'value',
-            axisLine: { onZero: false }
+            axisLine: { onZero: false },
+            splitLine: {
+                show: false
+            },
         },
         yAxis: {
             id: "0",
-            min: -200,
-            max: 200,
+            min: 0,
+            max: 2000,
             type: 'value',
-            axisLine: { onZero: false }
+            axisLine: { onZero: false },
+            splitLine: {
+                show: false
+            },
         },
         series: [
         ],
@@ -51,7 +57,7 @@ let current_tree_data: TreeData = {
     config: {
         minimum_branch_width: 5,
         branch_width_coefficient: 0.8,
-        point_width_ratio:1.3
+        point_width_ratio: 1.3
     },
     context: {
         id_counter: 0,
@@ -211,12 +217,10 @@ const MyChartComponent: React.FC = () => {
                                 break;
                             }
                         }
-                        if(index===0)
-                        {
+                        if (index === 0) {
                             let current = parent_branch;
-                            while(current.parent_id!==undefined)
-                            {
-                                current = current_tree_data.branches.find((value)=>value.id===current.parent_id)!;
+                            while (current.parent_id !== undefined) {
+                                current = current_tree_data.branches.find((value) => value.id === current.parent_id)!;
                             }
                             parent_branch = current;
                         }
@@ -225,7 +229,14 @@ const MyChartComponent: React.FC = () => {
                         console.log(overlap);
                         branch.parent_id = parent_branch.id;
                         if (!overlap) {
-                            index = parent_branch.coordinates.findIndex((value) => value[0] > branch.coordinates[0][0]);
+                            let predicate;
+                            if (branch.coordinates[0][0] < branch.coordinates[1][0]) {
+                                predicate = (value: [number, number]) => value[0] > branch.coordinates[0][0];
+                            }
+                            else {
+                                predicate = (value: [number, number]) => value[0] < branch.coordinates[0][0];
+                            }
+                            index = parent_branch.coordinates.findIndex(predicate);
                             parent_branch.coordinates.splice(index, 0, branch.coordinates[0]);
                         }
                         parent_branch.children[branch.id] = { connection_point_index: index as number };
