@@ -56,7 +56,7 @@ let current_tree_data: TreeData = {
     ],
     config: {
         minimum_branch_width: 5,
-        branch_width_coefficient: 0.8,
+        branch_width_coefficient: 0.4,
         point_width_ratio: 1.3
     },
     context: {
@@ -67,14 +67,15 @@ let current_tree_data: TreeData = {
 
 const ComputeWidth = (branches: BranchData[], branch_id: string) => {
     const branch = branches.find(value => value.id === branch_id)!;
+    // console.log(branch_id);
     if (Object.entries(branch.children).length === 0) {
         return branch.width;
     }
-    let total_width = current_tree_data.config.minimum_branch_width;
+    let total_width = 0;
     for (const [child, data] of Object.entries(branch.children)) {
         total_width += ComputeWidth(branches, child);
     }
-    branch.width = total_width * current_tree_data.config.branch_width_coefficient;
+    branch.width = current_tree_data.config.minimum_branch_width + total_width * current_tree_data.config.branch_width_coefficient;
     return total_width;
 }
 
@@ -205,24 +206,21 @@ const MyChartComponent: React.FC = () => {
                         let parent_branch = current_tree_data.branches.find((value) => value.id === clickedEvent.seriesIndex.toString())!;
                         const distance = current_tree_data.config.point_width_ratio * parent_branch.width;
                         let overlap = false;
-                        let index;
-                        console.log(distance);
-                        for (let i = 0; i < parent_branch.coordinates.length; i++) {
-                            const coordinate = parent_branch.coordinates[i];
-                            console.log(position, coordinate);
-                            if (Math.pow(position[0] - coordinate[0], 2) + Math.pow(position[1] - coordinate[1], 2) <= distance * distance) {
-                                position = coordinate;
-                                overlap = true;
-                                index = i;
-                                break;
+                        let index = 0;
+                        while (parent_branch.parent_id !== undefined && index === 0) {
+                            for (let i = 0; i < parent_branch.coordinates.length; i++) {
+                                const coordinate = parent_branch.coordinates[i];
+                                console.log(position, coordinate);
+                                if (Math.pow(position[0] - coordinate[0], 2) + Math.pow(position[1] - coordinate[1], 2) <= distance * distance) {
+                                    position = coordinate;
+                                    overlap = true;
+                                    index = i;
+                                    break;
+                                }
                             }
-                        }
-                        if (index === 0) {
-                            let current = parent_branch;
-                            while (current.parent_id !== undefined) {
-                                current = current_tree_data.branches.find((value) => value.id === current.parent_id)!;
+                            if (index === 0) {
+                                parent_branch = current_tree_data.branches.find((value) => value.id === parent_branch.parent_id)!;
                             }
-                            parent_branch = current;
                         }
                         // console.log("WTF", overlap);
                         branch.coordinates[0] = position;
@@ -230,7 +228,7 @@ const MyChartComponent: React.FC = () => {
                         branch.parent_id = parent_branch.id;
                         if (!overlap) {
                             let predicate;
-                            if (branch.coordinates[0][0] < branch.coordinates[1][0]) {
+                            if (parent_branch.coordinates[0][0] < parent_branch.coordinates[1][0]) {
                                 predicate = (value: [number, number]) => value[0] > branch.coordinates[0][0];
                             }
                             else {
@@ -239,6 +237,10 @@ const MyChartComponent: React.FC = () => {
                             index = parent_branch.coordinates.findIndex(predicate);
                             parent_branch.coordinates.splice(index, 0, branch.coordinates[0]);
                         }
+                        console.log(branch.id);
+                        console.log(parent_branch.id);
+                        console.log(branch);
+                        console.log(parent_branch);
                         parent_branch.children[branch.id] = { connection_point_index: index as number };
                         setReplace(true);
                     }

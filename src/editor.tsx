@@ -42,6 +42,7 @@ const BranchDataEditor = (props:
         enableReinitialize: true,
         initialValues: lastform,
         onSubmit: async (branch) => {
+            branch.children = {};
             const new_branch = { ...branch };
             new_branch.id = props.context.id_counter.toString();
             if (!fruit_enabled) {
@@ -124,6 +125,7 @@ const BranchDataEditor = (props:
                     type="text"
                     onChange={formik.handleChange}
                     value={formik.values.fruit.text}
+                    multiline={true}
                 />
             </Grid>
             <Grid item xs={6}>
