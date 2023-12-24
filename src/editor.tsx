@@ -42,13 +42,14 @@ const BranchDataEditor = (props:
         enableReinitialize: true,
         initialValues: lastform,
         onSubmit: async (branch) => {
-            branch.children = {};
             const new_branch = { ...branch };
+            new_branch.children = {};
+            new_branch.parent_id = undefined;
             new_branch.id = props.context.id_counter.toString();
             if (!fruit_enabled) {
                 new_branch.fruit = undefined;
             }
-            if (image) {
+            if (image&&fruit_enabled) {
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     console.log(reader.result);
@@ -211,7 +212,7 @@ const BranchDataEditor = (props:
                 <Div >Fruit Image</Div>
             </Grid>
             <Grid item xs={6}>
-                <MuiFileInput value={image} onChange={handleFileChange} placeholder="Upload a fruit image" inputProps={{
+                <MuiFileInput disabled={!fruit_enabled} value={image} onChange={handleFileChange} placeholder="Upload a fruit image" inputProps={{
                     accept: "image/*"
                 }} size="small" />
             </Grid>

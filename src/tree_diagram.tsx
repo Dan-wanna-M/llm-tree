@@ -26,6 +26,7 @@ let current_tree_data: TreeData = {
             max: 2000,
             type: 'value',
             axisLine: { onZero: false },
+            show: false,
             splitLine: {
                 show: false
             },
@@ -36,6 +37,7 @@ let current_tree_data: TreeData = {
             max: 2000,
             type: 'value',
             axisLine: { onZero: false },
+            show: false,
             splitLine: {
                 show: false
             },
@@ -206,8 +208,8 @@ const MyChartComponent: React.FC = () => {
                         let parent_branch = current_tree_data.branches.find((value) => value.id === clickedEvent.seriesIndex.toString())!;
                         const distance = current_tree_data.config.point_width_ratio * parent_branch.width;
                         let overlap = false;
-                        let index = 0;
-                        while (parent_branch.parent_id !== undefined && index === 0) {
+                        let index;
+                        while (parent_branch.parent_id !== undefined && (index === 0||index===undefined)) {
                             for (let i = 0; i < parent_branch.coordinates.length; i++) {
                                 const coordinate = parent_branch.coordinates[i];
                                 console.log(position, coordinate);
@@ -217,6 +219,10 @@ const MyChartComponent: React.FC = () => {
                                     index = i;
                                     break;
                                 }
+                            }
+                            if(index ===undefined)
+                            {
+                                break;
                             }
                             if (index === 0) {
                                 parent_branch = current_tree_data.branches.find((value) => value.id === parent_branch.parent_id)!;
