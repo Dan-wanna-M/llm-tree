@@ -1,7 +1,7 @@
 // Import React and ECharts components
 import _ from 'lodash';
 import type { EChartOption, ECharts } from "echarts";
-import { BranchData, Context, TreeData } from './data';
+import { BranchData, Context, FindBranch, TreeData } from './data';
 
 
 
@@ -13,7 +13,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
         let new_data = [...data];
         const position = chart.convertFromPixel({ gridId: "0" }, pos);
         new_data[dataIndex] = position;
-        tree_data.branches.find((value) => value.id === branch_data.id)!.coordinates = new_data as any;
+        FindBranch(tree_data.branches, branch_data.id)!.coordinates = new_data as any;
         let newOption = {
             series: [
                 {
@@ -25,7 +25,7 @@ export function CreateBranch(chart: ECharts, old_option: EChartOption, branch_da
         const results = Object.entries(branch_data.children).filter((value) => value[1].connection_point_index === dataIndex);
         for (const result of results) {
             const [child_id, child_data] = result;
-            const child = tree_data.branches.find((value) => value.id === child_id)!;
+            const child = FindBranch(tree_data.branches, child_id)!;
             const child_series_data = chart.getOption().series!.find((value) => value.id === child_id)!.data!;
             const new_child_data = [...child_series_data];
             child.coordinates[0] = new_data[dataIndex] as [number, number];

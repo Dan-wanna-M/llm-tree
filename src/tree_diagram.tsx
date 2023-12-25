@@ -4,7 +4,7 @@ import ReactECharts from 'echarts-for-react';
 import _, { values } from 'lodash';
 import { type EChartOption, type EChartsConvertFinder, type ECharts, type SetOptionOpts, number } from "echarts";
 import { CreateBranch } from './branch';
-import { BranchData, Config, TreeData } from './data';
+import { BranchData, Config, FindBranch, FindBranchIDFromSeriesIndex, RemoveBranch, TreeData } from './data';
 import { SaveJSON, UploadJSON } from './Serialization';
 import BranchDataEditor from './editor';
 import { Button, Grid } from '@mui/material';
@@ -124,7 +124,6 @@ const MyChartComponent: React.FC = () => {
         }
         const myChart: ECharts = diagram.getEchartsInstance();
         myChart.on('click', "series.line", (value: any) => {
-            console.log(value);
             if (current_tree_data.context.adjusting_position_enabled) {
                 setClickedEvent(undefined);
             }
@@ -181,6 +180,10 @@ const MyChartComponent: React.FC = () => {
         const newWin = window.open('', '_blank');
         (newWin as any).document.write(img.outerHTML);
     }
+    function DeleteBranch() {
+        throw new Error('Function not implemented.');
+    }
+
     return (<>
         <Grid container>
             <Grid item xs={10} style={{ height: '90vh' }}>
@@ -195,7 +198,13 @@ const MyChartComponent: React.FC = () => {
                 />
             </Grid>
             <Grid item xs={2}>
-                <BranchDataEditor updateData={(branch) => {
+                <BranchDataEditor 
+                editBranch={(branch)=>{
+                    Object.assign(FindBranch(current_tree_data.branches, branch.id)!, branch);
+                    console.log(FindBranch(current_tree_data.branches, branch.id), branch);
+                    synchronizeDataAndGraph();
+                }}
+                addBranch={(branch) => {
                     let diagram = instance.current as any;
                     if (diagram === null) {
                         return;
@@ -203,16 +212,14 @@ const MyChartComponent: React.FC = () => {
                     const myChart: ECharts = diagram.getEchartsInstance();
                     const clicked_graphic = (myChart?.getOption()?.graphic as any)[0].elements.find((value: any) => value.id === "clicked");
                     if (clicked_graphic && !clicked_graphic.invisible) {
-                        // console.log(clicked_graphic);
                         let position = myChart.convertFromPixel({ gridId: "0" }, clicked_graphic.position) as [number, number];
-                        let parent_branch = current_tree_data.branches.find((value) => value.id === clickedEvent.seriesIndex.toString())!;
+                        let parent_branch = FindBranch(current_tree_data.branches, FindBranchIDFromSeriesIndex(myChart.getOption(), clickedEvent?.seriesIndex)!)!;
                         const distance = current_tree_data.config.point_width_ratio * parent_branch.width;
                         let overlap = false;
                         let index;
-                        while (parent_branch.parent_id !== undefined && (index === 0||index===undefined)) {
+                        while (parent_branch.parent_id !== undefined && (index === 0 || index === undefined)) {
                             for (let i = 0; i < parent_branch.coordinates.length; i++) {
                                 const coordinate = parent_branch.coordinates[i];
-                                console.log(position, coordinate);
                                 if (Math.pow(position[0] - coordinate[0], 2) + Math.pow(position[1] - coordinate[1], 2) <= distance * distance) {
                                     position = coordinate;
                                     overlap = true;
@@ -220,17 +227,14 @@ const MyChartComponent: React.FC = () => {
                                     break;
                                 }
                             }
-                            if(index ===undefined)
-                            {
+                            if (index === undefined) {
                                 break;
                             }
                             if (index === 0) {
                                 parent_branch = current_tree_data.branches.find((value) => value.id === parent_branch.parent_id)!;
                             }
                         }
-                        // console.log("WTF", overlap);
                         branch.coordinates[0] = position;
-                        console.log(overlap);
                         branch.parent_id = parent_branch.id;
                         if (!overlap) {
                             let predicate;
@@ -243,10 +247,6 @@ const MyChartComponent: React.FC = () => {
                             index = parent_branch.coordinates.findIndex(predicate);
                             parent_branch.coordinates.splice(index, 0, branch.coordinates[0]);
                         }
-                        console.log(branch.id);
-                        console.log(parent_branch.id);
-                        console.log(branch);
-                        console.log(parent_branch);
                         parent_branch.children[branch.id] = { connection_point_index: index as number };
                         setReplace(true);
                     }
@@ -254,7 +254,15 @@ const MyChartComponent: React.FC = () => {
                     synchronizeDataAndGraph();
                 }} context={current_tree_data.context} updateContext={(context) => {
                     synchronizeDataAndGraph();
-                }} config={current_tree_data.config} />
+                }} config={current_tree_data.config} clicked_branch={(()=>{
+                    let diagram = instance.current as any;
+                    if (diagram === null) {
+                        return;
+                    }
+                    const myChart: ECharts = diagram.getEchartsInstance();
+                    return FindBranch(current_tree_data.branches, FindBranchIDFromSeriesIndex(myChart.getOption(), clickedEvent?.seriesIndex)!);
+                })()}
+                    delete_branch={(branch) => { RemoveBranch(current_tree_data.branches, branch.id); setReplace(true);setClickedEvent(undefined) }} />
             </Grid>
         </Grid>
         <SaveJSON data={current_tree_data} />

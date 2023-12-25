@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { BranchData, ChildrenData, Config, Context } from './data';
+import { BranchData, ChildrenData, Config, Context, FindBranch } from './data';
 import { Formik, Form, Field, ErrorMessage, useFormik } from 'formik';
 import Button from '@mui/material/Button';
 import Input from '@mui/material/Input';
-import { Checkbox, Grid, TextField, Typography, styled } from '@mui/material';
+import { Checkbox, Grid, TextField, ToggleButton, ToggleButtonGroup, Typography, styled } from '@mui/material';
 import { Label } from '@mui/icons-material';
 import { MuiFileInput } from 'mui-file-input';
 
@@ -16,18 +16,18 @@ const Div = styled('div')(({ theme }) => ({
 
 const BranchDataEditor = (props:
     {
+        clicked_branch: BranchData | undefined,
+        delete_branch: (branch: BranchData) => void,
         config: Config,
         context: Context,
         updateContext: (context: Context) => void,
-        updateData: (branch: BranchData) => void,
+        addBranch: (branch: BranchData) => void,
+        editBranch: (branch: any) => void
     }) => {
+    const [mode, setMode] = useState<string | null>("add");
     const [lastform, setFormData] = useState({
-        id: props.context.id_counter.toString(),
+        id: "-1",
         color: '#FF0000',
-        width: props.config.minimum_branch_width,
-        coordinates: [[0, 0], [20, 20], [80, 100], [100, 150]] as [[number, number], [number, number], [number, number], [number, number]],
-        children: {},
-        parent_id: undefined,
         fruit: {
             text: 'LLM',
             font_size: '2em',
@@ -42,31 +42,43 @@ const BranchDataEditor = (props:
         enableReinitialize: true,
         initialValues: lastform,
         onSubmit: async (branch) => {
-            const new_branch = { ...branch };
-            new_branch.children = {};
-            new_branch.parent_id = undefined;
-            new_branch.id = props.context.id_counter.toString();
-            if (!fruit_enabled) {
-                new_branch.fruit = undefined;
-            }
-            if (image&&fruit_enabled) {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    console.log(reader.result);
+            const new_branch = {
+                ...branch, width: props.config.minimum_branch_width,
+                coordinates: [[0, 0], [20, 20], [80, 100], [100, 150]] as [[number, number], [number, number], [number, number], [number, number]],
+                children: {},
+                parent_id: undefined
+            };
+            if (mode === "add") {
+                new_branch.id = props.context.id_counter.toString();
+                if (!fruit_enabled) {
+                    new_branch.fruit = undefined;
+                }
+                if (image && fruit_enabled) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        console.log(reader.result);
+                        props.context.id_counter += 1;
+                        new_branch.fruit.image = reader.result;
+                        branch.fruit.image = reader.result;
+                        props.updateContext({ ...props.context });
+                        props.addBranch(new_branch);
+                        branch.id = "-1";
+                        setFormData(branch);
+                    };
+                    reader.readAsDataURL(image);
+                }
+                else {
                     props.context.id_counter += 1;
-                    new_branch.fruit.image = reader.result;
-                    branch.fruit.image = reader.result;
                     props.updateContext({ ...props.context });
-                    props.updateData(new_branch);
+                    props.addBranch(new_branch);
                     setFormData(branch);
-                };
-                reader.readAsDataURL(image);
+                }
             }
-            else{
-                props.context.id_counter += 1;
-                props.updateContext({ ...props.context });
-                props.updateData(new_branch);
-                setFormData(branch);
+            else if (mode === "edit") {
+                props.editBranch({...branch});
+            }
+            else {
+                console.log("Unknown mode")
             }
         },
     });
@@ -76,11 +88,41 @@ const BranchDataEditor = (props:
         const file = e;
         setImage(file);
     };
+    console.log(props?.clicked_branch?.id, lastform.id);
+    const editModeUpdate = () => {
+        const new_branch = { ...props.clicked_branch };
+        set_fruit_enabled(new_branch.fruit !== undefined);
+        if (new_branch.fruit !== undefined) {
+            new_branch.fruit = { ...new_branch.fruit };
+        }
+        console.log("114");
+
+        setFormData(new_branch as any);
+    };
+    if (mode === "edit" && props.clicked_branch && props.clicked_branch.id !== lastform.id) {
+        editModeUpdate();
+    }
     useEffect(() => { props.updateContext(props.context) }, [props.context]);
     return (
         <Grid container item rowSpacing={1}>
             <Grid item xs={12}>
                 <Typography align={"center"} variant='h4'>Branch Editor</Typography>
+            </Grid>
+            <Grid item xs={12}>
+                <ToggleButtonGroup
+                    exclusive
+                    value={mode}
+                    onChange={(event, newValue) => {
+                        if (newValue) {
+                            setMode(newValue);
+                            if (newValue === "edit" && props.clicked_branch) {
+                                editModeUpdate();
+                            }
+                        }
+                    }}>
+                    <ToggleButton value="add">Add</ToggleButton >
+                    <ToggleButton value="edit">Edit</ToggleButton >
+                </ToggleButtonGroup>
             </Grid>
             <Grid item xs={6}>
                 <Div>ID</Div >
@@ -111,9 +153,9 @@ const BranchDataEditor = (props:
                 <Div>Enable Fruit</Div>
             </Grid>
             <Grid item xs={6}>
-                <Checkbox defaultChecked onChange={(event) => {
+                <Checkbox onChange={(event) => {
                     set_fruit_enabled(event.target.checked);
-                }} />
+                }} checked={fruit_enabled} />
             </Grid>
             <Grid item xs={6}>
                 <Div>Fruit Text</Div>
@@ -125,7 +167,7 @@ const BranchDataEditor = (props:
                     name="fruit.text"
                     type="text"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.text}
+                    value={formik.values?.fruit?.text}
                     multiline={true}
                 />
             </Grid>
@@ -139,7 +181,7 @@ const BranchDataEditor = (props:
                     name="fruit.font_size"
                     type="text"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.font_size}
+                    value={formik.values?.fruit?.font_size}
                 />
             </Grid>
             <Grid item xs={6}>
@@ -152,7 +194,7 @@ const BranchDataEditor = (props:
                     name="fruit.fill_color"
                     type="color"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.fill_color}
+                    value={formik.values?.fruit?.fill_color}
                 />
             </Grid>
             <Grid item xs={6}>
@@ -165,7 +207,7 @@ const BranchDataEditor = (props:
                     name="fruit.text_color"
                     type="color"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.text_color}
+                    value={formik.values?.fruit?.text_color}
                 />
             </Grid>
             <Grid item xs={6}>
@@ -179,7 +221,7 @@ const BranchDataEditor = (props:
                     name="fruit.stroke_color"
                     type="color"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.stroke_color}
+                    value={formik.values?.fruit?.stroke_color}
                 />
             </Grid>
             <Grid item xs={6}>
@@ -192,7 +234,7 @@ const BranchDataEditor = (props:
                     name="fruit.shape.width"
                     type="number"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.shape.width}
+                    value={formik.values.fruit?.shape?.width}
                 />
             </Grid>
             <Grid item xs={6}>
@@ -205,7 +247,7 @@ const BranchDataEditor = (props:
                     name="fruit.shape.height"
                     type="number"
                     onChange={formik.handleChange}
-                    value={formik.values.fruit.shape.height}
+                    value={formik.values.fruit?.shape?.height}
                 />
             </Grid>
             <Grid item xs={6}>
@@ -227,7 +269,12 @@ const BranchDataEditor = (props:
                     props.updateContext({ ...props.context });
                 }}>{!props.context.adjusting_position_enabled ? "Start adjust branch positions" : "End adjust branch positions"}</Button>
             </Grid>
-        </Grid>
+            <Grid item xs={12}>
+                <Button disabled={!props.clicked_branch} onClick={() => {
+                    props.delete_branch(props.clicked_branch!);
+                }}>{`Delete selected branch: ${props.clicked_branch?.fruit?.text}`}</Button>
+            </Grid>
+        </Grid >
     );
 };
 
